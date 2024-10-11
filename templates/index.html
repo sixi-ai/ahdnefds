@@ -1,0 +1,212 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+    <title>AI Agents Visualization</title>  
+    <!-- Import Google Icon Font and Materialize CSS -->  
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">  
+      
+    <style>  
+        body {  
+            font-family: 'Roboto', sans-serif;  
+            background-color: #212121;  
+            color: #FFFFFF;  
+        }  
+        #agents-container {  
+            position: relative;  
+            width: 100%;  
+            height: 80vh;  
+            margin: 0 auto;  
+            overflow: hidden;  
+        }  
+        .agent {  
+            position: absolute;  
+            width: 200px;  
+            height: 200px;  
+            text-align: center;  
+            cursor: pointer;  
+        }  
+        .agent .card {  
+            background-color: #424242;  
+            border-radius: 8px;  
+            padding: 10px;  
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);  
+        }  
+        .agent .card-content {  
+            padding: 10px;  
+        }  
+        .agent .card-title {  
+            font-size: 18px;  
+            margin-bottom: 5px;  
+        }  
+        .agent-icon {  
+            font-size: 60px;  
+            color: #00E676;  
+        }  
+        .agent-task {  
+            font-size: 14px;  
+            margin-top: 5px;  
+        }  
+        .message-line {  
+            position: absolute;  
+            background-color: #00E5FF;  
+            height: 2px;  
+            transform-origin: 0 0;  
+            z-index: 1;  
+        }  
+        .message-text {  
+            position: absolute;  
+            padding: 5px 10px;  
+            background-color: #263238;  
+            font-size: 14px;  
+            border-radius: 20px;  
+            color: #FFFFFF;  
+            white-space: nowrap;  
+            z-index: 2;  
+        }  
+        .message-text::after {  
+            content: '';  
+            position: absolute;  
+            border: 10px solid transparent;  
+            border-top-color: #263238;  
+            bottom: -20px;  
+            left: 50%;  
+            transform: translateX(-50%);  
+        }  
+    </style>  
+</head>  
+<body>  
+    <nav class="cyan darken-3">  
+        <div class="nav-wrapper">  
+            <a href="#" class="brand-logo center">AI Agents Visualization</a>  
+        </div>  
+    </nav>  
+    <div id="agents-container"></div>  
+  
+    <!-- Import jQuery and Materialize JavaScript -->  
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>  
+    <!-- For Materialize JS (not using many components, so optional) -->  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js" defer></script>  
+      
+    <script>  
+        const agentsContainer = document.getElementById('agents-container');  
+        const agentsPositions = {};  
+  
+        function fetchAgents() {  
+            fetch('/api/agents')  
+                .then(response => response.json())  
+                .then(data => {  
+                    // Clear previous agents and messages  
+                    agentsContainer.innerHTML = '';  
+  
+                    const containerWidth = agentsContainer.clientWidth;  
+                    const containerHeight = agentsContainer.clientHeight;  
+                    const centerX = containerWidth / 2;  
+                    const centerY = containerHeight / 2;  
+                    const radius = Math.min(centerX, centerY) - 150; // Adjusted padding  
+  
+                    const totalAgents = data.length;  
+  
+                    data.forEach((agent, index) => {  
+                        // Calculate position in circle  
+                        const angle = (2 * Math.PI / totalAgents) * index - Math.PI / 2; // Start from top  
+                        const x = centerX + radius * Math.cos(angle);  
+                        const y = centerY + radius * Math.sin(angle);  
+  
+                        agentsPositions[agent.agent_id] = { x, y };  
+  
+                        // Create agent element  
+                        const agentDiv = document.createElement('div');  
+                        agentDiv.className = 'agent';  
+                        agentDiv.style.left = `${x - 100}px`; // Adjust for width  
+                        agentDiv.style.top = `${y - 100}px`;  // Adjust for height  
+  
+                        // Agent Card  
+                        const agentCard = document.createElement('div');  
+                        agentCard.className = 'card';  
+  
+                        // Agent Icon  
+                        const agentIcon = document.createElement('i');  
+                        agentIcon.className = 'material-icons agent-icon';  
+                        agentIcon.textContent = 'android';  
+  
+                        // Agent Name  
+                        const agentName = document.createElement('span');  
+                        agentName.className = 'card-title';  
+                        agentName.textContent = `Agent ${agent.agent_id}`;  
+  
+                        // Agent Current Task  
+                        const agentTask = document.createElement('p');  
+                        agentTask.className = 'agent-task';  
+                        agentTask.textContent = `${agent.current_task}`;  
+  
+                        // Card Content  
+                        const cardContent = document.createElement('div');  
+                        cardContent.className = 'card-content';  
+                        cardContent.appendChild(agentIcon);  
+                        cardContent.appendChild(agentName);  
+                        cardContent.appendChild(agentTask);  
+  
+                        agentCard.appendChild(cardContent);  
+                        agentDiv.appendChild(agentCard);  
+  
+                        // Hover Effect (Optional)  
+                        agentDiv.addEventListener('mouseenter', () => {  
+                            agentCard.style.boxShadow = '0 8px 12px rgba(0, 229, 255, 0.5)';  
+                        });  
+                        agentDiv.addEventListener('mouseleave', () => {  
+                            agentCard.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.3)';  
+                        });  
+  
+                        agentsContainer.appendChild(agentDiv);  
+                    });  
+  
+                    // Draw messages between agents  
+                    data.forEach(agent => {  
+                        agent.messages.forEach(message => {  
+                            const senderPos = agentsPositions[message.sender];  
+                            const recipientPos = agentsPositions[message.recipient];  
+  
+                            if (senderPos && recipientPos) {  
+                                // Draw a line from sender to recipient  
+                                const line = document.createElement('div');  
+                                line.className = 'message-line';  
+  
+                                const deltaX = recipientPos.x - senderPos.x;  
+                                const deltaY = recipientPos.y - senderPos.y;  
+                                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);  
+  
+                                line.style.width = `${distance}px`;  
+                                line.style.left = `${senderPos.x}px`;  
+                                line.style.top = `${senderPos.y}px`;  
+                                const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);  
+                                line.style.transform = `rotate(${angle}deg)`;  
+  
+                                // Message text  
+                                const messageText = document.createElement('div');  
+                                messageText.className = 'message-text z-depth-3';  
+                                messageText.textContent = message.content;  
+  
+                                // Position message text halfway between agents  
+                                const textX = senderPos.x + deltaX / 2;  
+                                const textY = senderPos.y + deltaY / 2;  
+                                messageText.style.left = `${textX}px`;  
+                                messageText.style.top = `${textY}px`;  
+  
+                                agentsContainer.appendChild(line);  
+                                agentsContainer.appendChild(messageText);  
+                            }  
+                        });  
+                    });  
+  
+                })  
+                .catch(error => console.error('Error fetching agents:', error));  
+        }  
+  
+        // Fetch agents every 2 seconds  
+        setInterval(fetchAgents, 2000);  
+        // Initial fetch  
+        fetchAgents();  
+    </script>  
+</body>  
+</html>  
